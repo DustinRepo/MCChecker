@@ -68,8 +68,8 @@ public class Main {
             AccountChecker.status();
             Thread.sleep(config.getStatusDelay() * 1000L);
         }
-
         AccountChecker.done();
+        System.exit(0);
     }
 
     private static void readAccountFiles() throws IOException {

@@ -39,7 +39,7 @@ public class AccountChecker extends Thread {
             }
             try {
                 if (HttpHelper.login(minecraftAccount, proxy)) {
-                    Main.print("SUCCESS: " + minecraftAccount.getEmail() + ":" + minecraftAccount.getPassword(), Main.ANSI_GREEN);
+                    Main.print("SUCCESS: " + minecraftAccount, Main.ANSI_GREEN);
                     if (!workingAccounts.contains(minecraftAccount)) {
                         workingAccounts.add(minecraftAccount);
                         String fileString = minecraftAccount +"\n";
