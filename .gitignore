@@ -1,0 +1,7 @@
+/accounts-moj.txt
+/accounts-msa.txt
+/output-moj.txt
+/output-msa.txt
+
+out/
+.idea/
