@@ -43,6 +43,36 @@ public class Main {
         //remove the error shit from the login attempt
         System.setErr(new PrintStream(new DataOutputStream(new ByteArrayOutputStream())));
 
+        readAccountFiles();
+        if (accounts.isEmpty()) {
+            System.err.println(ANSI_RED + "ERROR! No accounts loaded. Please have atleast one account input file from config.cfg" + ANSI_RESET);
+            return;
+        }
+
+        readProxyFiles();
+        if (proxies.isEmpty()) {
+            print("ERROR! No proxies loaded. Please have proxies in the files set in config.cfg, automatically download proxies, or both", ANSI_RED);
+            return;
+        }
+
+        createOutputFiles();
+        print("Read " + accounts.size() + " accounts and " + proxies.size() + " proxies. Starting " + config.getThreadCount() + " threads...", ANSI_YELLOW);
+
+        threads = new Thread[config.getThreadCount()];
+
+        for (int i = 0; i < config.getThreadCount(); i++) {
+            (threads[i] = new AccountChecker(config)).start();
+        }
+        Thread.sleep(config.getStatusDelay() * 1000L);
+        while(runThreads) {
+            AccountChecker.status();
+            Thread.sleep(config.getStatusDelay() * 1000L);
+        }
+
+        AccountChecker.done();
+    }
+
+    private static void readAccountFiles() throws IOException {
         if (config.mojInputFile.exists()) {
             print( "Reading accounts-moj.txt", ANSI_YELLOW);
             String[] alts = FileHelper.readFile(config.mojInputFile).split("\n");
@@ -61,10 +91,9 @@ public class Main {
                 accounts.add(new MinecraftAccount(email, password, MinecraftAccount.AccountType.MSA));
             }
         }
-        if (accounts.isEmpty()) {
-            System.err.println(ANSI_RED + "ERROR! No accounts loaded. Please have atleast one account input file from config.cfg" + ANSI_RESET);
-            return;
-        }
+    }
+
+    private static void readProxyFiles() throws IOException {
         if (config.httpProxyFile.exists()) {
             print("Reading http-proxies.txt", ANSI_YELLOW);
             String[] proxiesList = FileHelper.readFile(config.httpProxyFile).split("\n");
@@ -83,18 +112,16 @@ public class Main {
                 proxies.add(new LoginProxy(ip, port, Proxy.Type.SOCKS));
             }
         }
-
-        if (config.downloadProxyList) {
+        if (config.isDownloadProxyList()) {
             print("Automatically downloading proxy list...", ANSI_YELLOW);
             proxies.addAll(LoginProxy.downloadProxyList());
             proxies = LoginProxy.removeDuplicates(proxies);
         } else {
             print("Not downloading proxy list", ANSI_RED);
         }
-        if (proxies.isEmpty()) {
-            print("ERROR! No proxies loaded. Please have proxies in the files set in config.cfg, automatically download proxies, or both", ANSI_RED);
-            return;
-        }
+    }
+
+    private static void createOutputFiles() throws IOException {
         if (!config.msaOutputFile.exists()) {
             print("Attempting to create Microsoft output file...", ANSI_YELLOW);
             if (!config.msaOutputFile.createNewFile()) {
@@ -107,26 +134,10 @@ public class Main {
                 print("ERROR! Could not create Mojang output file. If directed to a folder, make sure the folder exists", ANSI_RED);
             }
         }
-
-        print("Read " + accounts.size() + " accounts and " + proxies.size() + " proxies. Starting " + config.threadCount + " threads...", ANSI_YELLOW);
-
-        threads = new Thread[config.threadCount];
-
-        for (int i = 0; i < config.threadCount; i++) {
-            (threads[i] = new AccountChecker(config)).start();
-        }
-        Thread.sleep(config.statusDelay * 1000L);
-        while(runThreads) {
-            AccountChecker.status();
-            Thread.sleep(config.statusDelay * 1000L);
-        }
-
-        AccountChecker.done();
-        System.exit(0);
     }
     
     public static void print(String s, String color) {
-        if (config != null && config.colorConsole) {
+        if (config != null && config.isColorConsole()) {
             System.out.println(color + s + ANSI_RESET);
         } else {
             System.out.println(s);

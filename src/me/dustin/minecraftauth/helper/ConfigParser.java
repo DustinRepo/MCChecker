@@ -5,7 +5,7 @@ import java.util.Map;
 
 public class ConfigParser {
 
-    private Map<String, String> configMap = new HashMap<>();
+    private final Map<String, String> configMap = new HashMap<>();
 
     public ConfigParser(String input) {
         for (String s : input.split("\n")) {
