@@ -10,10 +10,10 @@ import java.util.ArrayList;
 
 public class LoginProxy {
 
-    public String ip;
-    public int port;
-    public int loginFails;
-    public Proxy.Type type;
+    private String ip;
+    private int port;
+    private int loginFails;
+    private Proxy.Type type;
 
     public LoginProxy(String ip, int port, Proxy.Type type) {
         this.ip = ip;
@@ -152,4 +152,40 @@ public class LoginProxy {
         return out;
     }
 
+    public String getIp() {
+        return ip;
+    }
+
+    public void setIp(String ip) {
+        this.ip = ip;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public int getLoginFails() {
+        return loginFails;
+    }
+
+    public void incLoginFails() {
+        this.loginFails++;
+    }
+
+    public Proxy.Type getType() {
+        return type;
+    }
+
+    public void setType(Proxy.Type type) {
+        this.type = type;
+    }
+
+    @Override
+    public String toString() {
+        return getIp() + ":" + getPort();
+    }
 }

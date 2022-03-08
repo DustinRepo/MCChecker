@@ -8,13 +8,13 @@ import java.io.IOException;
 
 public class Config {
 
-    public int threadCount;
-    public int attemptCount;
-    public int proxyFailKeepCount;
-    public int statusDelay;
-    public boolean downloadProxyList;
-    public boolean printFails;
-    public boolean colorConsole;
+    private final int threadCount;
+    private final int attemptCount;
+    private final int proxyFailKeepCount;
+    private final int statusDelay;
+    private final boolean downloadProxyList;
+    private final boolean printFails;
+    private final boolean colorConsole;
 
     public File mojInputFile, msaInputFile, mojOutputFile, msaOutputFile, socksProxyFile, httpProxyFile;
 
@@ -37,4 +37,55 @@ public class Config {
         httpProxyFile = new File(jarPath, configParser.readString("httpProxies"));
     }
 
+    public int getThreadCount() {
+        return threadCount;
+    }
+
+    public int getAttemptCount() {
+        return attemptCount;
+    }
+
+    public int getProxyFailKeepCount() {
+        return proxyFailKeepCount;
+    }
+
+    public int getStatusDelay() {
+        return statusDelay;
+    }
+
+    public boolean isDownloadProxyList() {
+        return downloadProxyList;
+    }
+
+    public boolean isPrintFails() {
+        return printFails;
+    }
+
+    public boolean isColorConsole() {
+        return colorConsole;
+    }
+
+    public File getMojInputFile() {
+        return mojInputFile;
+    }
+
+    public File getMsaInputFile() {
+        return msaInputFile;
+    }
+
+    public File getMojOutputFile() {
+        return mojOutputFile;
+    }
+
+    public File getMsaOutputFile() {
+        return msaOutputFile;
+    }
+
+    public File getSocksProxyFile() {
+        return socksProxyFile;
+    }
+
+    public File getHttpProxyFile() {
+        return httpProxyFile;
+    }
 }

@@ -38,10 +38,10 @@ public class HttpHelper {
 
 
     public static boolean login(MinecraftAccount minecraftAccount, LoginProxy proxy) throws IOException {
-        if (minecraftAccount.accountType == MinecraftAccount.AccountType.MOJANG) {
-            return loginMojang(minecraftAccount.email, minecraftAccount.password, proxy).toLowerCase().contains("accesstoken");
+        if (minecraftAccount.getAccountType() == MinecraftAccount.AccountType.MOJANG) {
+            return loginMojang(minecraftAccount.getEmail(), minecraftAccount.getPassword(), proxy).toLowerCase().contains("accesstoken");
         } else {
-            return loginMSA(minecraftAccount.email, minecraftAccount.password, proxy) != null;
+            return loginMSA(minecraftAccount.getEmail(), minecraftAccount.getPassword(), proxy) != null;
         }
     }
 
@@ -60,11 +60,11 @@ public class HttpHelper {
     //issue seems to be in the second HttpURLConnection being made, where it checks if it gets redirected
     //just see if we can get a login code with username and password, going through the whole process doesn't matter as long as we get that
     private static String loginMSA(String email, String password, LoginProxy loginProxy) throws IOException {
-        Proxy proxy = new Proxy(loginProxy.type, new InetSocketAddress(loginProxy.ip, loginProxy.port));
+        Proxy proxy = new Proxy(loginProxy.getType(), new InetSocketAddress(loginProxy.getIp(), loginProxy.getPort()));
         String loginPPFT;
         String loginUrl;
         URL url = new URL("https://login.live.com/oauth20_authorize.srf?redirect_uri=https://login.live.com/oauth20_desktop.srf&scope=service::user.auth.xboxlive.com::MBI_SSL&display=touch&response_type=code&locale=en&client_id=00000000402b5328");
-        HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+        HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection(proxy);
         InputStream inputStream = httpURLConnection.getResponseCode() == 200 ? httpURLConnection.getInputStream() : httpURLConnection.getErrorStream();
 
         String loginCookie = httpURLConnection.getHeaderField("set-cookie");
@@ -99,7 +99,7 @@ public class HttpHelper {
 
         byte[] data = postData.getBytes(StandardCharsets.UTF_8);
 
-        HttpURLConnection connection = (HttpURLConnection) new URL(loginUrl).openConnection();
+        HttpURLConnection connection = (HttpURLConnection) new URL(loginUrl).openConnection(proxy);
         connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=utf-8");
         connection.setRequestProperty("Content-Length", String.valueOf(data.length));
         connection.setRequestProperty("Cookie", loginCookie);
@@ -128,7 +128,7 @@ public class HttpHelper {
         ConnectionConfig connectionConfig = ConnectionConfig.custom().setBufferSize(4128).build();
         CloseableHttpClient httpclient = HttpClients.custom().setDefaultConnectionConfig(connectionConfig).build();
 
-        if (proxy.type == Proxy.Type.SOCKS) {
+        if (proxy.getType() == Proxy.Type.SOCKS) {
             Registry<ConnectionSocketFactory> reg = RegistryBuilder.<ConnectionSocketFactory>create().register("https", new MyConnectionSocketFactory(SSLContexts.createSystemDefault())).build();
             PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager(reg);
             httpclient = HttpClients.custom().setConnectionManager(cm).build();
@@ -136,21 +136,17 @@ public class HttpHelper {
         HttpPost post = new HttpPost(url);
         StringEntity postingString = new StringEntity(jsonData);
         post.setEntity(postingString);
-        for (String s : headers.keySet()) {
-            if (s.equalsIgnoreCase("Content-Length"))
-                post.removeHeaders("Content-Length");
-        }
         headers.forEach(post::setHeader);
 
         RequestConfig.Builder config = RequestConfig.custom();
         config.setConnectionRequestTimeout(10000).setConnectTimeout(10000);
-        if (proxy.type == Proxy.Type.HTTP)
-            config.setProxy(new HttpHost(proxy.ip, proxy.port));
+        if (proxy.getType() == Proxy.Type.HTTP)
+            config.setProxy(new HttpHost(proxy.getIp(), proxy.getPort()));
         post.setConfig(config.build());
 
         CloseableHttpResponse response;
-        if (proxy.type == Proxy.Type.SOCKS) {
-            InetSocketAddress socksaddr = new InetSocketAddress(proxy.ip, proxy.port);
+        if (proxy.getType() == Proxy.Type.SOCKS) {
+            InetSocketAddress socksaddr = new InetSocketAddress(proxy.getIp(), proxy.getPort());
             HttpClientContext context = HttpClientContext.create();
             context.setAttribute("socks.address", socksaddr);
             response = httpclient.execute(post, context);
