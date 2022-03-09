@@ -10,11 +10,10 @@ Microsoft account support: Supports checking Microsoft accounts
 ```
 
 ## IF USING MICROSOFT ACCOUNTS
-```
 If you're using Microsoft accounts, it is very strict. I recommend only using proxies in the country you are in.
 During testing, Microsoft actually emailed me about every attempt from proxies in areas like Russia, China, etc, and temporarily disabled my account until I verified email access.
 If you get your account locked and are not able to access the email, I take no responsibility. Use with caution.
-```
+
 ## How to Use
 ```
 1. Put your accounts into the .txt files set in config.cfg. (accounts-moj.txt and accounts-msa.txt by default)
