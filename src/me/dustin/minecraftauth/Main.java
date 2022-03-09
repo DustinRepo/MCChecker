@@ -194,8 +194,9 @@ public class Main {
         int size = accounts.size();
         if (size <= 0)
             return null;
-        MinecraftAccount account = accounts.get(0);
-        accounts.remove(account);
+        Random random = new Random();
+        int select = random.nextInt(size);
+        MinecraftAccount account = accounts.get(select);
         return account;
     }
 
