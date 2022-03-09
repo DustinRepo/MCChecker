@@ -74,7 +74,7 @@ public class Main {
 
     private static void readAccountFiles() throws IOException {
         if (config.mojInputFile.exists()) {
-            print( "Reading accounts-moj.txt", ANSI_YELLOW);
+            print( "Reading Mojang accounts", ANSI_YELLOW);
             String[] alts = FileHelper.readFile(config.mojInputFile).split("\n");
             for (String string : alts) {
                 String email = string.split(":")[0];
@@ -83,7 +83,7 @@ public class Main {
             }
         }
         if (config.msaInputFile.exists()) {
-            print("Reading accounts-msa.txt", ANSI_YELLOW);
+            print("Reading Microsoft accounts", ANSI_YELLOW);
             String[] alts = FileHelper.readFile(config.msaInputFile).split("\n");
             for (String string : alts) {
                 String email = string.split(":")[0];
@@ -95,7 +95,7 @@ public class Main {
 
     private static void readProxyFiles() throws IOException {
         if (config.httpProxyFile.exists()) {
-            print("Reading http-proxies.txt", ANSI_YELLOW);
+            print("Reading HTTP proxies", ANSI_YELLOW);
             String[] proxiesList = FileHelper.readFile(config.httpProxyFile).split("\n");
             for (String string : proxiesList) {
                 String ip = string.split(":")[0];
@@ -104,7 +104,7 @@ public class Main {
             }
         }
         if (config.socksProxyFile.exists()) {
-            print("Reading socks-proxies.txt", ANSI_YELLOW);
+            print("Reading SOCKS proxies", ANSI_YELLOW);
             String[] proxiesList = FileHelper.readFile(config.socksProxyFile).split("\n");
             for (String string : proxiesList) {
                 String ip = string.split(":")[0];
