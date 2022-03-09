@@ -15,8 +15,10 @@ public class Config {
     private final boolean downloadProxyList;
     private final boolean printFails;
     private final boolean colorConsole;
+    private final boolean outputUsername;
+    private final boolean checkOptifineCapes;
 
-    public File mojInputFile, msaInputFile, mojOutputFile, msaOutputFile, socksProxyFile, httpProxyFile;
+    private final File mojInputFile, msaInputFile, mojOutputFile, msaOutputFile, mcCapesOutputFile, socksProxyFile, httpProxyFile;
 
     public Config(File file) throws IOException {
         ConfigParser configParser = new ConfigParser(FileHelper.readFile(file));
@@ -27,12 +29,15 @@ public class Config {
         downloadProxyList = configParser.readBoolean("downloadProxyList");
         printFails = configParser.readBoolean("printFails");
         colorConsole = configParser.readBoolean("consoleColor");
+        outputUsername = configParser.readBoolean("outputUsername");
+        checkOptifineCapes = configParser.readBoolean("checkOptifineCapes");
 
         String jarPath = new File("").getAbsolutePath();
         mojInputFile = new File(jarPath, configParser.readString("mojangInput"));
         msaInputFile = new File(jarPath, configParser.readString("msaInput"));
         mojOutputFile = new File(jarPath, configParser.readString("mojangOutput"));
         msaOutputFile = new File(jarPath, configParser.readString("msaOutput"));
+        mcCapesOutputFile = new File(jarPath, configParser.readString("mcCapesOutput"));
         socksProxyFile = new File(jarPath, configParser.readString("socksProxies"));
         httpProxyFile = new File(jarPath, configParser.readString("httpProxies"));
     }
@@ -65,6 +70,14 @@ public class Config {
         return colorConsole;
     }
 
+    public boolean isOutputUsername() {
+        return outputUsername;
+    }
+
+    public boolean isCheckOptifineCapes() {
+        return checkOptifineCapes;
+    }
+
     public File getMojInputFile() {
         return mojInputFile;
     }
@@ -88,4 +101,9 @@ public class Config {
     public File getHttpProxyFile() {
         return httpProxyFile;
     }
+
+    public File getMcCapesOutputFile() {
+        return mcCapesOutputFile;
+    }
+
 }

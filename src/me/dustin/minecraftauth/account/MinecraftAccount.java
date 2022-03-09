@@ -1,10 +1,16 @@
 package me.dustin.minecraftauth.account;
 
+import me.dustin.minecraftauth.Main;
+
 public class MinecraftAccount {
 
-    private String email, password;
+    private final String email, password;
     private int failCount;
-    private AccountType accountType;
+    private final AccountType accountType;
+
+    private String name;
+    private String accessToken;
+    private String uuid;
 
     public MinecraftAccount(String email, String password, AccountType accountType) {
         this.email = email;
@@ -36,12 +42,36 @@ public class MinecraftAccount {
         return accountType;
     }
 
-    public enum AccountType {
-        MOJANG, MSA;
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    public void setAccessToken(String accessToken) {
+        this.accessToken = accessToken;
+    }
+
+    public String getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(String uuid) {
+        this.uuid = uuid;
     }
 
     @Override
     public String toString() {
-        return getEmail() + ":" + getPassword();
+        return (Main.getConfig().isOutputUsername() && getName() != null ? getName() + ":" : "") + getEmail() + ":" + getPassword();
+    }
+
+    public enum AccountType {
+        MOJANG, MSA;
     }
 }

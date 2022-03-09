@@ -22,7 +22,6 @@ public class AccountChecker extends Thread {
 
     public AccountChecker(Config config) {
         this.config = config;
-        origSize = Main.accounts.size();
     }
 
     @Override
@@ -34,27 +33,32 @@ public class AccountChecker extends Thread {
             }
 
             MinecraftAccount minecraftAccount = Main.getAccount();
+            if (checkedAccounts.contains(minecraftAccount))
+                minecraftAccount = Main.getAccount();
             if (minecraftAccount == null) {
                 break;
             }
             try {
                 if (HttpHelper.login(minecraftAccount, proxy)) {
                     Main.print("SUCCESS: " + minecraftAccount, Main.ANSI_GREEN);
+
                     if (!workingAccounts.contains(minecraftAccount)) {
                         workingAccounts.add(minecraftAccount);
                         String fileString = minecraftAccount +"\n";
-                        Files.write(minecraftAccount.getAccountType() == MinecraftAccount.AccountType.MSA ? config.msaOutputFile.toPath() :  config.mojOutputFile.toPath(), fileString.getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
+                        Files.write(minecraftAccount.getAccountType() == MinecraftAccount.AccountType.MSA ? config.getMsaOutputFile().toPath() :  config.getMojOutputFile().toPath(), fileString.getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
                     }
                     if (!checkedAccounts.contains(minecraftAccount))
                         checkedAccounts.add(minecraftAccount);
+
                     removeDuplicates();
                     Main.accounts.remove(minecraftAccount);
                 } else {
-                    if (config.isPrintFails())
-                        Main.print("FAIL: " + minecraftAccount, Main.ANSI_RED);
                     proxy.incLoginFails();
                     if (proxy.getLoginFails() >= config.getProxyFailKeepCount()) {
+                        LoginProxy newProxy = new LoginProxy(proxy.getIp(), proxy.getPort(), proxy.getType());
+                        Main.proxies.remove(proxy);
                         proxy = Main.getProxy();
+                        Main.proxies.add(newProxy);
                     }
                     else {
                         minecraftAccount.incFailCount();
@@ -64,6 +68,8 @@ public class AccountChecker extends Thread {
                             Main.accounts.remove(minecraftAccount);
                         }
                     }
+                    if (config.isPrintFails())
+                        Main.print("FAIL: " + minecraftAccount + " " + minecraftAccount.getFailCount() + "/" + config.getAttemptCount(), Main.ANSI_RED);
                 }
             } catch (Exception e) {
                 //e.printStackTrace(System.out);
@@ -83,7 +89,7 @@ public class AccountChecker extends Thread {
     }
 
     public static void status() {
-        removeDuplicateChecked();
+        removeDuplicates();
         Main.print("Checked fully: " + checkedAccounts.size() + "/" + origSize + " successful so far: " + workingAccounts.size() + "/" + origSize, Main.ANSI_YELLOW);
         Main.print((origSize - checkedAccounts.size()) + " Accounts and " + Main.proxies.size() + " Proxies left", Main.ANSI_YELLOW);
     }
@@ -109,11 +115,15 @@ public class AccountChecker extends Thread {
 
     private static void removeDuplicateWorking() {
         ArrayList<MinecraftAccount> temp = new ArrayList<>();
-        for (MinecraftAccount checkedAccount : checkedAccounts) {
+        for (MinecraftAccount checkedAccount : workingAccounts) {
             if (!temp.contains(checkedAccount))
                 temp.add(checkedAccount);
         }
-        checkedAccounts.clear();
-        checkedAccounts.addAll(temp);
+        workingAccounts.clear();
+        workingAccounts.addAll(temp);
+    }
+
+    public static void setOrigSize(int origSize) {
+        AccountChecker.origSize = origSize;
     }
 }

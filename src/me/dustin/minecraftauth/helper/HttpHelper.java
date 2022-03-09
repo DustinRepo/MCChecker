@@ -1,5 +1,8 @@
 package me.dustin.minecraftauth.helper;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import me.dustin.minecraftauth.account.MinecraftAccount;
 import me.dustin.minecraftauth.proxy.LoginProxy;
@@ -36,10 +39,19 @@ import java.util.stream.Collectors;
 
 public class HttpHelper {
 
+    private static final Gson gson = new GsonBuilder().disableHtmlEscaping().create();
 
     public static boolean login(MinecraftAccount minecraftAccount, LoginProxy proxy) throws IOException {
         if (minecraftAccount.getAccountType() == MinecraftAccount.AccountType.MOJANG) {
-            return loginMojang(minecraftAccount.getEmail(), minecraftAccount.getPassword(), proxy).toLowerCase().contains("accesstoken");
+            String resp = loginMojang(minecraftAccount.getEmail(), minecraftAccount.getPassword(), proxy);
+            if (!resp.contains("accessToken"))
+                return false;
+            JsonObject respObject = gson.fromJson(resp, JsonObject.class);
+            minecraftAccount.setAccessToken(respObject.get("accessToken").getAsString());
+            JsonObject selectedProfile = respObject.getAsJsonObject("selectedProfile");
+            minecraftAccount.setName(selectedProfile.get("name").getAsString());
+            minecraftAccount.setUuid(selectedProfile.get("id").getAsString());
+            return true;
         } else {
             return loginMSA(minecraftAccount.getEmail(), minecraftAccount.getPassword(), proxy) != null;
         }
@@ -56,6 +68,60 @@ public class HttpHelper {
         return loginRequest("https://authserver.mojang.com/authenticate", jsonObject.toString(), header, proxy);
     }
 
+    public static String getMCCapes(MinecraftAccount minecraftAccount, LoginProxy loginProxy) {
+        Proxy proxy = new Proxy(loginProxy.getType(), new InetSocketAddress(loginProxy.getIp(), loginProxy.getPort()));
+        StringBuilder out = new StringBuilder();
+        try {
+            HttpURLConnection connection = (HttpURLConnection) new URL("https://api.minecraftservices.com/minecraft/profile").openConnection(proxy);
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(10 * 1000);
+            connection.setRequestProperty("Authorization", "Bearer " + minecraftAccount.getAccessToken());
+            BufferedReader input = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            StringBuilder buffer = new StringBuilder();
+            for (String line; (line = input.readLine()) != null; ) {
+                buffer.append(line);
+                buffer.append("\n");
+            }
+            connection.disconnect();
+            JsonObject object = gson.fromJson(buffer.toString(), JsonObject.class);
+            if (object.get("capes") != null) {
+                JsonArray capesArray = object.getAsJsonArray("capes");
+                for (int i = 0; i < capesArray.size(); i++) {
+                    JsonObject capeObject = capesArray.get(i).getAsJsonObject();
+                    out.append(capeObject.get("alias").getAsString());
+                }
+            } else {
+                System.out.println(buffer);
+            }
+        } catch (Exception e) {
+            return null;
+        }
+
+        return out.toString();
+    }
+
+    public static String getOptifineCape(MinecraftAccount minecraftAccount, LoginProxy loginProxy) {
+        Proxy proxy = new Proxy(loginProxy.getType(), new InetSocketAddress(loginProxy.getIp(), loginProxy.getPort()));
+        try {
+            HttpURLConnection connection = (HttpURLConnection) new URL("http://s.optifine.net/capes/" + minecraftAccount.getName() + ".png").openConnection(proxy);
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(10 * 1000);
+            BufferedReader input = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            StringBuilder buffer = new StringBuilder();
+            for (String line; (line = input.readLine()) != null; ) {
+                buffer.append(line);
+                buffer.append("\n");
+            }
+            connection.disconnect();
+            return buffer.toString();
+        } catch (Exception e) {
+            if (e instanceof FileNotFoundException)
+                return "Not found";
+        }
+
+        return null;
+    }
+
     //for some reason it doesn't seem to work even tho this is the same exact thing I do for Jex with Microsoft login
     //issue seems to be in the second HttpURLConnection being made, where it checks if it gets redirected
     //just see if we can get a login code with username and password, going through the whole process doesn't matter as long as we get that
@@ -68,6 +134,8 @@ public class HttpHelper {
         InputStream inputStream = httpURLConnection.getResponseCode() == 200 ? httpURLConnection.getInputStream() : httpURLConnection.getErrorStream();
 
         String loginCookie = httpURLConnection.getHeaderField("set-cookie");
+
+        httpURLConnection.disconnect();
 
         String responseData = new BufferedReader(new InputStreamReader(inputStream)).lines().collect(Collectors.joining());
         Matcher bodyMatcher = Pattern.compile("sFTTag:[ ]?'.*value=\"(.*)\"/>'").matcher(responseData);
@@ -114,6 +182,8 @@ public class HttpHelper {
         if (connection.getResponseCode() != 200 || connection.getURL().toString().equals(loginUrl)) {
             return null;
         }
+
+        httpURLConnection.disconnect();
 
         Pattern pattern = Pattern.compile("[?|&]code=([\\w.-]+)");
 

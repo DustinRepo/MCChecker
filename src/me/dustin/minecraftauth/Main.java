@@ -2,10 +2,13 @@ package me.dustin.minecraftauth;
 
 import me.dustin.minecraftauth.account.MinecraftAccount;
 import me.dustin.minecraftauth.helper.FileHelper;
+import me.dustin.minecraftauth.helper.HttpHelper;
 import me.dustin.minecraftauth.thread.AccountChecker;
 import me.dustin.minecraftauth.proxy.LoginProxy;
+import me.dustin.minecraftauth.thread.CapeChecker;
 
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.ArrayList;
 import java.util.Random;
@@ -30,9 +33,6 @@ public class Main {
     private static boolean runThreads = true;
 
     public static void main(String[] args) throws InterruptedException, IOException {
-        print("Welcome to MCChecker", ANSI_YELLOW);
-        print("Reading config file...", ANSI_YELLOW);
-
         String jarPath = new File("").getAbsolutePath();
         try {
             config = new Config(new File(jarPath, "config.cfg"));
@@ -40,12 +40,32 @@ public class Main {
             e.printStackTrace(System.out);
             System.exit(0);
         }
+
+        boolean checkCapes = false;
+        if (args.length > 0) {
+            for (String arg : args) {
+                if (arg.equalsIgnoreCase("--capes") || arg.equalsIgnoreCase("-c"))
+                    checkCapes = true;
+                else if (arg.equalsIgnoreCase("--help") || arg.equalsIgnoreCase("-h")) {
+                    print("MCChecker arguments:", ANSI_CYAN);
+                    print("-h --help: The help message. (this)", ANSI_CYAN);
+                    print("-c --capes: Check for capes instead. Assumes all accounts are valid", ANSI_CYAN);
+                    return;
+                }
+            }
+        }
+        print("Welcome to MCChecker", ANSI_YELLOW);
+        if (checkCapes) {
+            print("Switched to Cape Checker mode!", ANSI_PURPLE);
+            print("Please note the Cape Checker mode assumes you have already verified the login credentials!", ANSI_PURPLE);
+        }
+        print("Reading config file...", ANSI_YELLOW);
         //remove the error shit from the login attempt
         System.setErr(new PrintStream(new DataOutputStream(new ByteArrayOutputStream())));
 
         readAccountFiles();
         if (accounts.isEmpty()) {
-            System.err.println(ANSI_RED + "ERROR! No accounts loaded. Please have atleast one account input file from config.cfg" + ANSI_RESET);
+            print("ERROR! No accounts loaded. Please have atleast one account input file from config.cfg", ANSI_RED);
             return;
         }
 
@@ -60,52 +80,64 @@ public class Main {
 
         threads = new Thread[config.getThreadCount()];
 
+        int size = accounts.size();
+        AccountChecker.setOrigSize(size);
+        CapeChecker.setOrigSize(size);
         for (int i = 0; i < config.getThreadCount(); i++) {
-            (threads[i] = new AccountChecker(config)).start();
+            (threads[i] = checkCapes ? new CapeChecker(config) : new AccountChecker(config)).start();
         }
         Thread.sleep(config.getStatusDelay() * 1000L);
         while(runThreads) {
-            AccountChecker.status();
+            if (checkCapes)
+                CapeChecker.status();
+            else
+                AccountChecker.status();
             Thread.sleep(config.getStatusDelay() * 1000L);
         }
-        AccountChecker.done();
+
+        if (checkCapes)
+            CapeChecker.done();
+        else
+            AccountChecker.done();
         System.exit(0);
     }
 
     private static void readAccountFiles() throws IOException {
-        if (config.mojInputFile.exists()) {
+        if (config.getMojInputFile().exists()) {
             print( "Reading Mojang accounts", ANSI_YELLOW);
-            String[] alts = FileHelper.readFile(config.mojInputFile).split("\n");
+            String[] alts = FileHelper.readFile(config.getMojInputFile()).split("\n");
             for (String string : alts) {
-                String email = string.split(":")[0];
-                String password = string.split(":")[1];
+                String[] info = string.split(":");
+                String email = info[info.length - 2];
+                String password = info[info.length - 1];
                 accounts.add(new MinecraftAccount(email, password, MinecraftAccount.AccountType.MOJANG));
             }
         }
-        if (config.msaInputFile.exists()) {
+        if (config.getMsaInputFile().exists()) {
             print("Reading Microsoft accounts", ANSI_YELLOW);
-            String[] alts = FileHelper.readFile(config.msaInputFile).split("\n");
+            String[] alts = FileHelper.readFile(config.getMsaInputFile()).split("\n");
             for (String string : alts) {
-                String email = string.split(":")[0];
-                String password = string.split(":")[1];
+                String[] info = string.split(":");
+                String email = info[info.length - 2];
+                String password = info[info.length - 1];
                 accounts.add(new MinecraftAccount(email, password, MinecraftAccount.AccountType.MSA));
             }
         }
     }
 
     private static void readProxyFiles() throws IOException {
-        if (config.httpProxyFile.exists()) {
+        if (config.getHttpProxyFile().exists()) {
             print("Reading HTTP proxies", ANSI_YELLOW);
-            String[] proxiesList = FileHelper.readFile(config.httpProxyFile).split("\n");
+            String[] proxiesList = FileHelper.readFile(config.getHttpProxyFile()).split("\n");
             for (String string : proxiesList) {
                 String ip = string.split(":")[0];
                 int port = Integer.parseInt(string.split(":")[1]);
                 proxies.add(new LoginProxy(ip, port, Proxy.Type.HTTP));
             }
         }
-        if (config.socksProxyFile.exists()) {
+        if (config.getSocksProxyFile().exists()) {
             print("Reading SOCKS proxies", ANSI_YELLOW);
-            String[] proxiesList = FileHelper.readFile(config.socksProxyFile).split("\n");
+            String[] proxiesList = FileHelper.readFile(config.getSocksProxyFile()).split("\n");
             for (String string : proxiesList) {
                 String ip = string.split(":")[0];
                 int port = Integer.parseInt(string.split(":")[1]);
@@ -122,16 +154,22 @@ public class Main {
     }
 
     private static void createOutputFiles() throws IOException {
-        if (!config.msaOutputFile.exists()) {
+        if (!config.getMsaOutputFile().exists()) {
             print("Attempting to create Microsoft output file...", ANSI_YELLOW);
-            if (!config.msaOutputFile.createNewFile()) {
+            if (!config.getMsaOutputFile().createNewFile()) {
                 print("ERROR! Could not create Microsoft output file. If directed to a folder, make sure the folder exists", ANSI_RED);
             }
         }
-        if (!config.mojOutputFile.exists()) {
+        if (!config.getMojOutputFile().exists()) {
             print("Attempting to create Mojang output file...", ANSI_YELLOW);
-            if (!config.mojOutputFile.createNewFile()) {
+            if (!config.getMojOutputFile().createNewFile()) {
                 print("ERROR! Could not create Mojang output file. If directed to a folder, make sure the folder exists", ANSI_RED);
+            }
+        }
+        if (!config.getMcCapesOutputFile().exists()) {
+            print("Attempting to create Minecraft Cape output file...", ANSI_YELLOW);
+            if (!config.getMcCapesOutputFile().createNewFile()) {
+                print("ERROR! Could not create Minecraft Cape output file. If directed to a folder, make sure the folder exists", ANSI_RED);
             }
         }
     }
@@ -156,9 +194,9 @@ public class Main {
         int size = accounts.size();
         if (size <= 0)
             return null;
-        Random random = new Random();
-        int select = random.nextInt(size);
-        return accounts.get(select);
+        MinecraftAccount account = accounts.get(0);
+        accounts.remove(account);
+        return account;
     }
 
     public static LoginProxy getProxy() {
@@ -168,5 +206,9 @@ public class Main {
         Random random = new Random();
         int select = random.nextInt(size);
         return proxies.get(select);
+    }
+
+    public static Config getConfig() {
+        return config;
     }
 }
